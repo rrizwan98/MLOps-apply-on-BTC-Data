@@ -9,4 +9,4 @@ dill
 Flask
 keras
 tensorflow 
--e .
+# -e .
