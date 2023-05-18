@@ -2,6 +2,8 @@ import os
 import sys
 from dataclasses import dataclass
 
+import math
+from sklearn.metrics import mean_squared_error
 from keras.layers import Conv2D, MaxPooling2D, GlobalAveragePooling2D, Dense, Dropout, Flatten, MaxPool2D, BatchNormalization
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, classification_report
 from keras.utils import to_categorical
@@ -11,7 +13,7 @@ import pandas as pd
 import numpy as np
 import keras
 
-
+from src.models import BiGRU_model
 from src.exception import CustomException
 from src.logger import logging
 from src.utils import save_object,evaluate_models
@@ -19,114 +21,81 @@ logging.info("necessary libraries are installed in mode_trainer.py")
 
 @dataclass
 class ModelTrainerConfig:
-    trained_model_file_path = os.path.join("artifacts","model.h5")
+    trained_model_file_path = os.path.join("artifacts","model.pkl")
 
 class ModelTrainer:
     def __init__(self):
         self.model_trainer_config = ModelTrainerConfig()
 
-    def initiate_model_trainer(self, X_train_data_path, y_train_data_path, X_test_data_path, y_test_data_path):
+class ModelTrainer:
+    def __init__(self):
+        self.model_trainer_config = ModelTrainerConfig()
+
+    def create_dataset(self, dataset, time_step=1):
+        dataX, dataY = [], []
+        for i in range(len(dataset)-time_step-1):
+            a = dataset[i:(i+time_step), 0]   ###i=0, 0,1,2,3-----99   100 
+            dataX.append(a)
+            dataY.append(dataset[i + time_step, 0])
+        return np.array(dataX), np.array(dataY)
+    
+    def initiate_model_trainer(self, train_trns, test_trns,close_price):
         try:
             logging.info("Split training and test input data")
-            print(X_train_data_path)
-            X_train = np.load(X_train_data_path,allow_pickle=True)
-            y_train = np.load(y_train_data_path,allow_pickle=True)
-            X_test = np.load(X_test_data_path,allow_pickle=True)
-            y_test = np.load(y_test_data_path,allow_pickle=True)
-            # print(X_train)
-# Design a custom Convolutional Neural Network Model
-            logging.info("creating a custom Convolutional Neural Network Model")           
-            model = Sequential()
-            model.add(Conv2D(16,kernel_size=(3,3),activation='relu',input_shape=X_train[0].shape))
-            model.add(BatchNormalization())
-            model.add(MaxPool2D(2,2))
-            model.add(Dropout(0.3))
+            ##splitting dataset into train and test split
+            training_size=int(len(close_price)*0.85)
+            test_size=len(close_price)-training_size
+            train_data,test_data=close_price[0:training_size,:],close_price[training_size:len(close_price),:1]
+            print("train and test data lenght",training_size,test_size)
 
-            model.add(Conv2D(32,kernel_size=(3,3),activation='relu'))
-            model.add(BatchNormalization())
-            model.add(MaxPool2D(2,2))
-            model.add(Dropout(0.3))
+            # reshape into X=t,t+1,t+2,t+3 and Y=t+4
+            time_step = 10
+            X_train, y_train = self.create_dataset(train_data, time_step)
+            X_test, ytest = self.create_dataset(test_data, time_step)
 
+            logging.info("print train and test data")
+            print("X_train shape",X_train.shape), print("y_train shape",y_train.shape)
+            print("X_test shape",X_test.shape), print("y_test shape",ytest.shape)
 
-            model.add(Conv2D(64,kernel_size=(3,3),activation='relu'))
-            model.add(BatchNormalization())
-            model.add(MaxPool2D(2,2))
-            model.add(Dropout(0.4))
+            logging.info("reshape input to be [samples, time steps, features] which is required for LSTM, GRU")
+            # reshape input to be [samples, time steps, features] which is required for LSTM
+            X_train =X_train.reshape(X_train.shape[0],X_train.shape[1] , 1)
+            X_test = X_test.reshape(X_test.shape[0],X_test.shape[1] , 1)
 
-            model.add(Flatten())
+            input_shape=(X_train.shape[1],1)
+            models = {
+                "Random Forest": BiGRU_model(input_shape)
+            }
 
-            model.add(Dense(128,activation='relu'))
-            model.add(BatchNormalization())
-            model.add(Dropout(0.5))
-
-            model.add(Dense(1,activation='sigmoid'))
-            model.summary()
-
-# model compilation
-            logging.info("Model Compilation started")
-            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-
-# define batch size & Epochs
+            # define batch size & Epochs
             logging.info("Define Batch size and Epochs")
             batch_size = 16
-            epochs = 1   
+            epochs = 15   
             logging.info("Start Model Training")
-            model_report = evaluate_models(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-                                           model=model, batch_size= batch_size, epochs=epochs)
+            model_report = evaluate_models(X_train=X_train, y_train=y_train, X_test=X_test, y_test=ytest,
+                                           models=models, batch_size= batch_size, epochs=epochs)
 
             ## To get best model score from dict
             best_model = model_report
             logging.info("Predict the train and test dataset")
-            y_train_pred = best_model.predict(X_train)
-            y_test_pred =  best_model.predict(X_test)
-            prediction = np.array(y_test_pred)
-            prediction = prediction.argmax(axis=1)
-## Train predicted score
-            # logging.info("confusion_matrix, accuracy_score & f1_score for traing data")
-            logging.info("print predicted and actual results")
-            # train_cm=confusion_matrix(y_train,y_train_pred.round(), normalize=False)
-            # train_model_acc_score = accuracy_score(y_train,y_train_pred.round(), normalize=False)
-            # train_model_f1_score = f1_score(y_train,y_train_pred.round(), normalize=False)
-            print("Actual Results:", y_test)
-            # print("predicted Results:", prediction)
+            biGRU_train_predict=best_model.predict(X_train)
+            biGRU_test_predict=best_model.predict(X_test)
+
+            ### Calculate RMSE performance metrics
+            
+            train_mse = math.sqrt(mean_squared_error(y_train,biGRU_train_predict))
+            print("train_mse: ",train_mse)
+
+            ### Test Data RMSE
+            test_mse = math.sqrt(mean_squared_error(ytest,biGRU_test_predict))
+            print("test_mse: ",test_mse)
+
             save_object(
                 file_path=self.model_trainer_config.trained_model_file_path,
                 obj = best_model
             )
-            # best_model.save(self.model_trainer_config.trained_model_file_path)
-
-## Test predicted score
-            # logging.info("confusion_matrix, accuracy_score & f1_score for test data")
-            # test_cm=confusion_matrix(y_test,y_test_pred.round(), normalize=False)
-            # test_model_acc_score = accuracy_score(y_test,y_test_pred.round(), normalize=False)
-            # test_model_f1_score = f1_score(y_test,y_test_pred.round(), normalize=False)
-            
-            # logging.info("print confusion_matrix, accuracy_score & f1_score ")
-            # print("********* Training Score ***********")
-            # print(train_cm)
-            # print(train_model_acc_score)
-            # print(train_model_f1_score)
-
-            # print("********* Testing Score ***********")
-            # print(test_cm)
-            # print(test_model_acc_score)
-            # print(test_model_f1_score)
-            # ## to get best model name from dict
-
-            # best_model_name = list(model_report.keys())[
-            #     list(model_report.values()).index(best_model_score)
-            # ]
-            # best_model = model_report.model
-
-            # if best_model_score < 0.5:
-            #     raise CustomException("Neural Network is not train properly")
-            # logging.info(f"Best found model on both training and testing dataset")
-
-            # save_object(
-            #     best_model.save(self.model_trainer_config.trained_model_file_path)
-            # )
             
             logging.info("Model Training part is completed")
-            return y_test_pred
+            return X_train.shape
         except Exception as e:
             raise CustomException(e,sys)

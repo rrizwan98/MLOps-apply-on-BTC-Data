@@ -1,6 +1,9 @@
 import os
 import sys
 
+from keras.models import Sequential
+from keras import layers
+from keras.optimizers import RMSprop
 import numpy as np 
 import pandas as pd
 import dill
@@ -22,25 +25,27 @@ def save_object(file_path, obj):
     except Exception as e:
         raise CustomException(e, sys)
     
-def evaluate_models(X_train, y_train, X_test, y_test, model, batch_size, epochs):
+def evaluate_models(X_train, y_train, X_test, y_test, models, batch_size, epochs):
     try:
         report = {}
 
         
         print("print train and test data in utils file")
-        print(X_train.shape)
-        print(y_train.shape)
+        # print(X_train.shape)
+        # print(y_train.shape)
                 
-        print(X_test.shape)
-        print(y_test.shape)
+        # print(X_test.shape)
+        # print(y_test.shape)
 
         print("model summary in utils file")
-        model.summary()
+        for i in range(len(list(models))):
+            model = list(models.values())[i]
+            model.summary()
 
-        # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-        model.fit(X_train, y_train, epochs=epochs, validation_data=(X_test, y_test), batch_size=batch_size)
+            model.compile(optimizer=RMSprop(), loss='mae')
+            model.fit(X_train,y_train,validation_data=(X_test,y_test),epochs=epochs,batch_size=batch_size,verbose=1)
 
-        return model
+            return model
     
     except Exception as e:
         raise CustomException(e, sys)

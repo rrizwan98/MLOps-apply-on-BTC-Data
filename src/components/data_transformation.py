@@ -55,11 +55,12 @@ class DataTransformation:
             dataY.append(dataset[i + time_step, 0])
         return np.array(dataX), np.array(dataY)
         
-    def initiate_data_transformation(self,train_path,test_path):
+    def initiate_data_transformation(self,train_path,test_path,close_price):
         
         try:
             train_df= pd.read_csv(train_path)
             test_df= pd.read_csv(test_path)
+            close_price= pd.read_csv(close_price)
             
             train_data_len = len(train_df.values)
             logging.info("Read train and test data completed")
@@ -71,7 +72,8 @@ class DataTransformation:
             # train_data = train_df[0:train_data_len, :]
 
             input_feature_train_arr = preprocessing_obj.fit_transform(train_df)
-            input_feature_test_arr=preprocessing_obj.transform(test_df)
+            input_feature_test_arr=preprocessing_obj.fit_transform(test_df)
+            input_feature_close_price=preprocessing_obj.fit_transform(close_price)
 
             # reshape into X=t,t+1,t+2,t+3 and Y=t+4
             # logging.info("Start Creating a X_train and y_train data")
@@ -124,9 +126,10 @@ class DataTransformation:
                 obj=preprocessing_obj
             )
             logging.info("save Preprocessing.pkl file is done!")
+            logging.info("data_transformation.py part is done!")
             return (
                 input_feature_train_arr,
-                input_feature_test_arr,self.data_transformation_config.preprocessor_obj_file_path
+                input_feature_test_arr,input_feature_close_price,self.data_transformation_config.preprocessor_obj_file_path
             )
         except Exception as e:
             raise CustomException(e,sys)
