@@ -1,0 +1,56 @@
+<html>
+<body>
+    <div class="login">
+       <h1>Predict Future Close price of Bitcoin (BTC)</h1>
+       <h2>Please select a number to predict the future Close price of Bitcoin (BTC).</h2>
+   
+       <form action="{{ url_for('predict_datapoint')}}" method="post">
+        <!-- <h1>
+            <legend>Student Exam Performance Prediction</legend>
+        </h1> -->
+        <div class="mb-3">
+            <label class="form-label">Age</label>
+            <select class="form-control" name="pred_day" placeholder="Enter you AGE" required>
+                <option class="placeholder" selected disabled value="">Select AGE</option>
+                <option value="1">
+                    1
+                </option>
+                <option value="2">
+                    2
+                </option>
+                <option value="3">
+                    3
+                </option>
+                <option value="4">
+                    4
+                </option>
+                <option value="5">
+                    5
+                </option>
+                <option value="6">
+                    6
+                </option>
+                <option value="7">
+                    7
+                </option>
+            </select>
+        </div>
+        <!-- <div class="mb-3">
+            <label class="form-label">Writing Score out of 100</label>
+            <input class="form-control" type="number" name="reading_score"
+                placeholder="Enter your Reading score" min='0' max='100' />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Reading Score out of 100</label>
+            <input class="form-control" type="number" name="writing_score"
+                placeholder="Enter your Reading Score" min='0' max='100' />
+        </div> -->
+        <div class="mb-3">
+            <input class="btn btn-primary" type="submit" value="Prediction" required />
+        </div>
+    </form>
+    <h2>
+       THE  prediction is {{results}}
+    </h2>
+   <body>
+</html>

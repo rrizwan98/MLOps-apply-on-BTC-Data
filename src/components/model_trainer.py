@@ -21,7 +21,7 @@ logging.info("necessary libraries are installed in mode_trainer.py")
 
 @dataclass
 class ModelTrainerConfig:
-    trained_model_file_path = os.path.join("artifacts","model.pkl")
+    trained_model_file_path = os.path.join("artifacts","model.h5")
 
 class ModelTrainer:
     def __init__(self):
@@ -92,7 +92,7 @@ class ModelTrainer:
 
             save_object(
                 file_path=self.model_trainer_config.trained_model_file_path,
-                obj = best_model
+                model = best_model
             )
             
             logging.info("Model Training part is completed")
