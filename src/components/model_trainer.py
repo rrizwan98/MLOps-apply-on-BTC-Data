@@ -3,7 +3,7 @@ import sys
 from dataclasses import dataclass
 
 import math
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error,mean_absolute_percentage_error
 from keras.layers import Conv2D, MaxPooling2D, GlobalAveragePooling2D, Dense, Dropout, Flatten, MaxPool2D, BatchNormalization
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, classification_report
 from keras.utils import to_categorical
@@ -83,12 +83,17 @@ class ModelTrainer:
 
             ### Calculate RMSE performance metrics
             
-            train_mse = math.sqrt(mean_squared_error(y_train,biGRU_train_predict))
-            print("train_mse: ",train_mse)
+            train_RMSE = math.sqrt(mean_squared_error(y_train,biGRU_train_predict))
+            print("train_RMSE: ",train_RMSE)
 
             ### Test Data RMSE
-            test_mse = math.sqrt(mean_squared_error(ytest,biGRU_test_predict))
-            print("test_mse: ",test_mse)
+            test_RMSE = math.sqrt(mean_squared_error(ytest,biGRU_test_predict))
+            print("test_RMSE: ",test_RMSE)
+
+            test_mse = mean_squared_error(ytest,biGRU_test_predict)
+            print("test_MSE: ",test_mse)
+
+            print("test MAPE: ",mean_absolute_percentage_error(ytest, biGRU_test_predict))
 
             save_object(
                 file_path=self.model_trainer_config.trained_model_file_path,
